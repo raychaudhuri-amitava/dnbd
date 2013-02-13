@@ -1,0 +1,1 @@
+cmd_/mnt/store/dnbd_optimize/dnbd/kernel/dnbd.o := ld -m elf_x86_64  -r -o /mnt/store/dnbd_optimize/dnbd/kernel/dnbd.o /mnt/store/dnbd_optimize/dnbd/kernel/queue.o /mnt/store/dnbd_optimize/dnbd/kernel/cache.o /mnt/store/dnbd_optimize/dnbd/kernel/net.o /mnt/store/dnbd_optimize/dnbd/kernel/main.o

@@ -1,0 +1,153 @@
+INTRODUCTION
+============
+
+DNBD (Distributed Network Block Device) is a read-only and caching network
+block device and supports following main features:
+
+* replication of servers for robustness
+* multicast communication and caching of network traffic for scalability
+
+These characteristics make it suitable especially for use in wireless networks,
+e.g. for diskless clients or to share multimedia files in such an environment.
+The servers can export a file or block device equipped with a operating system,
+movies, music, etc. Several clients can import the block device and access it
+like a local hard disk. However, each block transfer over the network can be
+cached by all clients: If several users on each client start to watch a movie
+within a certain time interval, the movie data has to be transmitted only once
+(depending on the cache size). The network is not burdened with unnecessary
+traffic. 
+DNBD can be used together with cowloop [1] or unionfs [2] in order to get local
+write semantics, e.g. for diskless clients. Especially in wireless environments
+with limited bandwidth, caching can increase boot-up time enormously.
+
+COMPILATION
+===========
+
+DNBD was developed for kernel 2.6.13 and later releases. Kernel 2.4 is not
+supported. The kernel sources and common tools (gcc, make, etc.) have to be
+installed.
+
+Server and Client
+--------------------
+Unpacking:
+$ tar xzvf dnbd.tar.gz
+   
+Compiling:
+$ cd dnbd; make
+
+USAGE
+=====
+
+Server
+------
+To show available command line parameters, start the server without
+arguments:
+
+$ ./server/dnbd-server
+dnbd-server, version 0.9.0
+Usage: dnbd-server -m <address> -d <device/file> -i <number> 
+                  [-t <threads>]
+
+description:
+  -m|--mcast     <multicast address>
+  -d|--device    <block device or file>
+  -i|--id        <unique identification number>
+  -t|--threads   <number of threads>
+
+With the following command, the server will be started for the multicast
+network with address 239.0.0.1 and export the given file or block device.
+Its unique id is 1:
+
+root@server1 $ ./server/dnbd-server -m 239.0.0.1 -d <partition/file> -i 1
+
+To start a server on another computer, the used file or block device must have
+the same content and size as on the first server. However, the id has to be
+changed:
+
+root@server2 $ ./server/dnbd-server -m 239.0.0.1 -d <partition/file> -i 2
+
+If DNBD is used for wired networks and on multi-processor machines, the
+number of threads should be increased to the number of CPUs.
+
+To access the exported file or block device, another computer is used as 
+client.
+
+Client
+------
+
+The kernel module has to be loaded, before the client application can be used:
+
+root@client1 $ insmod ./kernel/dnbd.ko
+
+There should be an entry in syslog after successful loading. With no command
+line arguments the client gives available options:
+
+root@client1 $ ./client/dnbd-client
+dnbd-client, version 0.9.0
+Usage: dnbd-client -d device -b <address> [-c <file>]
+    or dnbd-client -d device -u
+    or dnbd-client -d device -c <file>
+
+description:
+  -d|--device    <device>
+  -b|--bind      <multicast-address>
+  -u|--unbind    
+  -c|--cache     <file>
+
+We will now import the block device of the server, e.g.:
+
+root@client1 $ ./client/dnbd-client -d /dev/dnbd0 -b 239.0.0.1
+
+The client should tell you that it found a server with id "1". If you exported
+a CDROM with a movie, you can watch it on the client over the network, e.g.
+with mplayer (usually after mounting).
+
+If someone else wants to watch the movie on a different client, you should
+enable caching either during operation
+
+root@client1 $ ./client/dnbd-client -d /dev/dnbd0 -c <cachefile>
+
+or at the beginning
+
+root@client2 $ ./client/dnbd-client -d /dev/dnbd0 -b 239.0.0.1 -c <cachefile>
+
+To create a cache with, e.g. 32M use
+
+root@client1$ dd if=/dev/zero of=/tmp/cachefile bs=1M count=32
+
+Cache statistics are shown with
+
+root@client1$ cat /proc/driver/dnbd/dnbd0
+
+The block device has to be unbound before the module can be unloaded:
+
+root@client1 $ ./client/dnbd-client -d /dev/dnbd0 -u
+root@client1 $ rmmod dnbd
+
+FILES
+=====
+
+Client
+------
+./client
+   client.c		# client application
+
+Server
+------
+./server
+   net.c		# network routines
+   query.c		# server request handling
+   filer.c		# file/device I/O
+   server.c		# server application (main file)
+   
+Kernel module
+-------------
+./kernel
+   net.c		# server management
+   queue.c		# queue handling for requests
+   cache.c		# cache implementation (red-black trees)
+   main.c		# module and block device (un)registration, threads
+
+
+[1] http://www.atconsultancy.nl/cowloop/
+[2] http://www.fsl.cs.sunysb.edu/project-unionfs.html

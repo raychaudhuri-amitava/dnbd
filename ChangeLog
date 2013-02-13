@@ -1,0 +1,6 @@
+13 oct 2006 Milind Dumbare <milind@linsyssoft.com>
+	* Optimized dnbd_dev allocation.
+	* Added macro for printks
+
+-- Jan 2006 Thorsten Zitterell <thorsten@zitterell.de>
+	* DNBD-0.1 released
